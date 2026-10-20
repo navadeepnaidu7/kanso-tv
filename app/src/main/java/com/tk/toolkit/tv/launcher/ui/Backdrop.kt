@@ -62,7 +62,6 @@ fun Backdrop(
     var current by remember { mutableStateOf<ImageBitmap?>(null) }
     var previous by remember { mutableStateOf<ImageBitmap?>(null) }
     val fade = remember { Animatable(1f) }
-    val cache = remember { HashMap<String, ImageBitmap>() }
     val dim = animateFloatAsState(if (dimmed.value) 0.5f else 0f, Motion.fade, label = "dim")
 
     LaunchedEffect(Unit) {
@@ -71,8 +70,7 @@ fun Backdrop(
             .collectLatest { app ->
                 if (app == null) return@collectLatest
                 delay(Motion.BackdropSettleMillis)
-                val key = "${app.packageName}:${app.lastUpdateTime}"
-                val art = cache[key] ?: withContext(Dispatchers.Default) { blurredArt(app) }.also { cache[key] = it }
+                val art = Washes.cached(app) ?: withContext(Dispatchers.Default) { Washes.get(app) }
                 if (art === current) return@collectLatest
                 // Interrupted mid-fade: keep fading from whichever image is mostly showing.
                 if (previous == null || fade.value >= 0.5f) previous = current
@@ -107,11 +105,24 @@ fun Backdrop(
     )
 }
 
+/** Each app's blurred wash, made once and shared by the backdrop and the opening animation. */
+internal object Washes {
+    private val cache = HashMap<String, ImageBitmap>()
+
+    private fun key(app: LauncherApp) = "${app.packageName}:${app.lastUpdateTime}"
+
+    fun cached(app: LauncherApp): ImageBitmap? = synchronized(cache) { cache[key(app)] }
+
+    /** The wash, making it if needed (a few milliseconds of CPU). */
+    fun get(app: LauncherApp): ImageBitmap =
+        cached(app) ?: blurredArt(app).also { synchronized(cache) { cache[key(app)] = it } }
+}
+
 private const val ART_W = 160
 private const val ART_H = 90
 
 /** The app's banner (or icon on its color), shrunk, toned down and box-blurred into a soft wash. */
-internal fun blurredArt(app: LauncherApp): ImageBitmap {
+private fun blurredArt(app: LauncherApp): ImageBitmap {
     val bitmap = Bitmap.createBitmap(ART_W, ART_H, Bitmap.Config.ARGB_8888)
     val canvas = android.graphics.Canvas(bitmap)
     // Richer color, less light: artwork becomes a backdrop, not a billboard.

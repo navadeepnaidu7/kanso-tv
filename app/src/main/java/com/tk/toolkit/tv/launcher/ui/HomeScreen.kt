@@ -238,14 +238,7 @@ fun HomeScreen(viewModel: LauncherViewModel = viewModel()) {
                 contentPadding = PaddingValues(start = Dimens.EdgePadding, end = Dimens.EdgePadding, bottom = 48.dp),
                 horizontalArrangement = Arrangement.spacedBy(Dimens.TileGap),
                 verticalArrangement = Arrangement.spacedBy(Dimens.RowGap),
-                modifier = Modifier
-                    .fillMaxSize()
-                    // The home screen sinks back a little as an app opens.
-                    .graphicsLayer {
-                        val s = 1f - 0.04f * opening.amount
-                        scaleX = s
-                        scaleY = s
-                    },
+                modifier = Modifier.fillMaxSize(),
             ) {
                 item(key = HERO_KEY, span = { GridItemSpan(maxLineSpan) }) {
                     Box(

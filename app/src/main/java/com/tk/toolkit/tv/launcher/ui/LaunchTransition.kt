@@ -23,6 +23,13 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupPositionProvider
+import androidx.compose.ui.window.PopupProperties
 import androidx.compose.ui.util.lerp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -39,8 +46,9 @@ import kotlinx.coroutines.launch
  * wash of its colors floods out from where it sat. The app then fades in over that. Coming back,
  * the same thing plays in reverse and the tile settles back into its place.
  *
- * Everything moves through layer transforms over two small images, so it costs the GPU about as
- * much as the backdrop does.
+ * It plays in a window of its own over the home screen. The compositor stacks the two, so the
+ * home screen doesn't redraw while it plays (redrawing it every frame is what this TV's GPU can't
+ * keep up with); each frame is just the wash and the tile, moved by layer transforms.
  */
 @Stable
 class LaunchTransition internal constructor(private val scope: CoroutineScope) {
@@ -66,16 +74,14 @@ class LaunchTransition internal constructor(private val scope: CoroutineScope) {
     /** While the tile is on its way out, keys are ignored so focus doesn't move under it. */
     val blocksInput: Boolean get() = phase == Phase.Opening
 
-    /** How far the home screen has receded, for scaling it back a little. */
-    val amount: Float get() = progress.value.coerceIn(0f, 1f)
-
     /** Plays the opening from [from] and calls [start] partway through. [start] says whether the app launched. */
     fun open(app: LauncherApp, from: Rect?, start: () -> Boolean) {
         if (phase == Phase.Opening || phase == Phase.Away) return
         job?.cancel()
         this.app = app
         this.from = from
-        wash = blurredArt(app)
+        // Usually ready: the backdrop made it when the tile was focused.
+        wash = Washes.get(app)
         paused = false
         phase = Phase.Opening
         job = scope.launch {
@@ -125,11 +131,31 @@ fun rememberLaunchTransition(): LaunchTransition {
     return transition
 }
 
-/** Draws the opening over the whole screen while one is playing. */
+/** Draws the opening over the whole screen, in its own window, while one is playing. */
 @Composable
 fun LaunchOverlay(transition: LaunchTransition) {
-    val app = transition.app ?: return
-    val wash = transition.wash
+    // The window always exists, sized to nothing while idle: creating it on OK costs ~150ms,
+    // which would swallow the start of the opening. Not focusable, so keys keep going to the home screen.
+    Popup(
+        popupPositionProvider = TopLeft,
+        properties = PopupProperties(focusable = false, clippingEnabled = false),
+    ) {
+        val app = transition.app
+        if (app != null) Opening(transition, app, transition.wash)
+    }
+}
+
+private object TopLeft : PopupPositionProvider {
+    override fun calculatePosition(
+        anchorBounds: IntRect,
+        windowSize: IntSize,
+        layoutDirection: LayoutDirection,
+        popupContentSize: IntSize,
+    ) = IntOffset.Zero
+}
+
+@Composable
+private fun Opening(transition: LaunchTransition, app: LauncherApp, wash: ImageBitmap?) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val screen = Size(constraints.maxWidth.toFloat(), constraints.maxHeight.toFloat())
         val from = transition.from ?: Rect(
@@ -157,8 +183,9 @@ fun LaunchOverlay(transition: LaunchTransition) {
                         translationX = lerp(from.left, 0f, t)
                         translationY = lerp(from.top, 0f, t)
                         // Corners in the layer's own (unscaled) units, rounding off to square at full screen.
-                        shape = RoundedCornerShape(Dimens.TileCorner.toPx() * (1f - t) / sx)
-                        clip = true
+                        // No clip once it fills the screen; clipping a full-screen layer isn't free.
+                        clip = t < 0.995f
+                        if (clip) shape = RoundedCornerShape(Dimens.TileCorner.toPx() * (1f - t) / sx)
                     },
             )
         }
@@ -182,7 +209,8 @@ fun LaunchOverlay(transition: LaunchTransition) {
                     translationY = lerp(from.top, (screen.height - from.height) / 2f, t)
                     shape = TileShape
                     clip = true
-                    shadowElevation = Dimens.FocusElevation.toPx() * (1f + t.coerceIn(0f, 1f))
+                    // Grows with the tile; a large soft shadow costs the GPU more than the rest put together.
+                    shadowElevation = Dimens.FocusElevation.toPx()
                 },
         ) {
             AppArt(app)

@@ -13,6 +13,7 @@ A calm, minimal home screen (launcher) for Google TV and Android TV, built with 
 - **Sorting.** Suggested (streaming and media first, then other apps, utilities and system), Name, Recently installed, or Custom: move any app anywhere from its menu.
 - **Backgrounds.** While browsing, the background is a soft blur of the focused app's artwork.
 - **Motion.** Spring-driven focus, scrolling and transitions, all tuned in one file (`ui/theme/Motion.kt`), and kept smooth on modest TV hardware: blurs and scrims are pre-rendered, so each frame is just a few image draws.
+- **Opening apps.** The tile glides to the middle and grows while its colors flood the screen, then the app fades in; coming back plays it in reverse. Focused tiles get a fine light-catching edge.
 - **Panels.** The app menu, Customize (wallpaper and sort) and Hidden apps slide in from the right.
 
 ## Getting started

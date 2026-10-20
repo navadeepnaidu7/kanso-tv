@@ -1,7 +1,6 @@
 package com.tk.toolkit.tv.launcher.ui
 
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
@@ -28,6 +27,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
@@ -104,6 +104,8 @@ internal fun FocusTile(
                     shape = TileShape
                     shadowElevation = Dimens.FocusElevation.toPx() * l.coerceIn(0f, 1f)
                 }
+                // Outside the card's own clip, so the edge line isn't cut in half by it.
+                .focusEdge(alpha = { lift.value.coerceIn(0f, 1f) }, moving = isMoving)
                 .focusRequester(focusRequester)
                 .onFocusChanged {
                     focused = it.isFocused
@@ -115,10 +117,7 @@ internal fun FocusTile(
             shape = CardDefaults.shape(TileShape),
             // Scale is ours (spring-driven, above), so the card's own tween is off.
             scale = CardDefaults.scale(scale = 1f, focusedScale = 1f, pressedScale = 1f),
-            border = CardDefaults.border(
-                focusedBorder = if (isMoving) Border(BorderStroke(3.dp, ToolkitColors.Accent), shape = TileShape)
-                else Border.None,
-            ),
+            border = CardDefaults.border(focusedBorder = Border.None),
             colors = CardDefaults.colors(
                 containerColor = ToolkitColors.Surface,
                 focusedContainerColor = ToolkitColors.Surface,
@@ -156,7 +155,27 @@ internal fun FocusTile(
     }
 }
 
-/** Faint light from the top, plus a hairline rim, so the focused tile reads as raised. */
+private val EdgeWidth = 2.dp
+
+/**
+ * The focused tile's outline: a fine line on its very edge, bright where light would catch it at
+ * the top and softer toward the bottom, so it reads as part of the tile rather than a frame around
+ * it. In the accent color while the tile is being moved. Drawn in the tile's layer, so it grows
+ * with the tile, and fading it only redraws the tile.
+ */
+private fun Modifier.focusEdge(alpha: () -> Float, moving: Boolean) = drawWithCache {
+    val brush = if (moving) SolidColor(ToolkitColors.Accent)
+    else Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.95f), Color.White.copy(alpha = 0.45f)))
+    val stroke = Stroke(width = EdgeWidth.toPx())
+    val radius = CornerRadius(Dimens.TileCorner.toPx())
+    onDrawWithContent {
+        drawContent()
+        val a = alpha()
+        if (a > 0f) drawRoundRect(brush, cornerRadius = radius, style = stroke, alpha = a)
+    }
+}
+
+/** Faint light from the top, so the focused tile reads as raised. */
 private fun Modifier.sheen() = drawWithCache {
     val gloss = Brush.linearGradient(
         0f to Color.White.copy(alpha = 0.14f),
@@ -165,11 +184,8 @@ private fun Modifier.sheen() = drawWithCache {
         start = Offset(size.width * 0.2f, 0f),
         end = Offset(size.width * 0.55f, size.height),
     )
-    val rim = Brush.verticalGradient(listOf(Color.White.copy(alpha = 0.32f), Color.White.copy(alpha = 0.06f)))
     val radius = CornerRadius(Dimens.TileCorner.toPx())
-    val stroke = Stroke(width = 1.5.dp.toPx())
     onDrawWithContent {
         drawRoundRect(gloss, cornerRadius = radius)
-        drawRoundRect(rim, cornerRadius = radius, style = stroke)
     }
 }
