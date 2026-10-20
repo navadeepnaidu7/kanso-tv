@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Speaker
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -36,11 +35,10 @@ import java.time.format.DateTimeFormatter
 
 private data class ClockText(val time: String, val meridiem: String?, val date: String)
 
-/** The time, large and quiet, with the date as one line under it; customize, audio and settings on the right. */
+/** The time, large and quiet, with the date as one line under it; customize and settings on the right. */
 @Composable
 fun ClockHeader(
     onOpenCustomize: () -> Unit,
-    onOpenAudioOutput: () -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
     /** The wallpaper's title and credit, shown under the date while [captionAlpha] > 0. */
@@ -93,8 +91,6 @@ fun ClockHeader(
         }
         Spacer(Modifier.weight(1f))
         HeaderButton(Icons.Outlined.Tune, "Customize", onOpenCustomize)
-        Spacer(Modifier.width(12.dp))
-        HeaderButton(Icons.Outlined.Speaker, "Audio output", onOpenAudioOutput)
         Spacer(Modifier.width(12.dp))
         HeaderButton(Icons.Outlined.Settings, "Settings", onOpenSettings)
     }

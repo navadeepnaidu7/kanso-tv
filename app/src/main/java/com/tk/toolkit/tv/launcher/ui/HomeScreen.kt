@@ -286,7 +286,6 @@ fun HomeScreen(viewModel: LauncherViewModel = viewModel()) {
                     ) {
                         ClockHeader(
                             onOpenCustomize = { showCustomize = true },
-                            onOpenAudioOutput = { AppActions.openAudioOutput(context) },
                             onOpenSettings = { AppActions.openSystemSettings(context) },
                             modifier = Modifier.padding(top = 32.dp),
                             caption = wallpaperCaption,

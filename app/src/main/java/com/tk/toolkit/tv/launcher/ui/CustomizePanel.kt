@@ -22,6 +22,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import com.tk.toolkit.tv.core.HomeSwitcher
+import com.tk.toolkit.tv.launcher.data.AppActions
 import com.tk.toolkit.tv.launcher.data.SortMode
 import com.tk.toolkit.tv.launcher.data.WallpaperSource
 import com.tk.toolkit.tv.launcher.weather.Condition
@@ -123,6 +124,9 @@ private fun MainPage(wallpaper: WallpaperSource, sort: SortMode, focusOn: Page, 
     }
     PanelGap()
     PanelItem("Sort Apps", { open(Page.Sort) }, Modifier.focusFor(Page.Sort), value = sort.title, opens = true)
+
+    // The TV's own picker (speakers, HDMI, Bluetooth), over the home screen once the panel has gone.
+    PanelItem("Audio Output", { panel.close { AppActions.openAudioOutput(context) } }, opens = true)
 
     // What the Home button opens. The TV's own home screen takes over at once, so the panel closes.
     var toolkitHome by remember { mutableStateOf(HomeSwitcher.isToolkitHome(context)) }
