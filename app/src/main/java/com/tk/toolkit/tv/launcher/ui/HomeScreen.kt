@@ -79,6 +79,7 @@ import com.tk.toolkit.tv.launcher.weather.WeatherLayer
 import com.tk.toolkit.tv.ui.theme.Dimens
 import com.tk.toolkit.tv.ui.theme.Motion
 import com.tk.toolkit.tv.ui.theme.ToolkitColors
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private const val MORE_APPS_KEY = "more-apps"
@@ -132,6 +133,21 @@ fun HomeScreen(viewModel: LauncherViewModel = viewModel()) {
     val peekAlpha = animateFloatAsState(if (homeView) 0f else 1f, Motion.fade, label = "peek")
     // In the home view the dock settles into the space All Apps peeks into.
     val dockDrop = animateFloatAsState(if (homeView) 1f else 0f, Motion.dockSlide, label = "dockDrop")
+    // Tiles glide to new places only while an app is being moved, or just after the sort changes.
+    // Left on, every row the grid builds or recycles while scrolling fast slides in from the wrong
+    // place, and tiles fly across and over each other.
+    var sortChanged by remember { mutableStateOf(false) }
+    var firstSort by remember { mutableStateOf(true) }
+    LaunchedEffect(state.sortMode) {
+        if (firstSort) {
+            firstSort = false
+            return@LaunchedEffect
+        }
+        sortChanged = true
+        delay(1_200)
+        sortChanged = false
+    }
+    val gridGlides = sortChanged || (state.movingKey != null && state.movingInGrid)
     val homeAnchor = remember { FocusRequester() }
     val opening = rememberLaunchTransition()
     fun openApp(app: LauncherApp, from: Rect?) {
@@ -339,7 +355,7 @@ fun HomeScreen(viewModel: LauncherViewModel = viewModel()) {
                         columns = Dimens.Columns,
                         // Tiles glide to their new places when the sort changes.
                         modifier = Modifier
-                            .animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = Motion.reorder)
+                            .animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = if (gridGlides) Motion.reorder else null)
                             .graphicsLayer { alpha = peekAlpha.value },
                     )
                 }

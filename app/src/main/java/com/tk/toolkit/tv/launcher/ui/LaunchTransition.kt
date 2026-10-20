@@ -1,5 +1,6 @@
 package com.tk.toolkit.tv.launcher.ui
 
+import android.view.View
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
@@ -7,6 +8,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -22,6 +24,7 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntRect
@@ -141,6 +144,10 @@ fun LaunchOverlay(transition: LaunchTransition) {
         properties = PopupProperties(focusable = false, clippingEnabled = false),
     ) {
         val app = transition.app
+        // Hidden outright while idle: an emptied window can keep showing its last frame (the tile
+        // where the return left it), stuck over the home screen.
+        val window = LocalView.current.rootView
+        SideEffect { window.visibility = if (app != null) View.VISIBLE else View.INVISIBLE }
         if (app != null) Opening(transition, app, transition.wash)
     }
 }
