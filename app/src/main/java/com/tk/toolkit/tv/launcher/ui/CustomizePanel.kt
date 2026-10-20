@@ -20,6 +20,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalContext
+import com.tk.toolkit.tv.core.HomeSwitcher
 import com.tk.toolkit.tv.launcher.data.SortMode
 import com.tk.toolkit.tv.launcher.data.WallpaperSource
 import com.tk.toolkit.tv.launcher.weather.Condition
@@ -66,7 +68,7 @@ fun CustomizePanel(
                 true
             }
         },
-    ) {
+    ) { panel ->
         AnimatedContent(
             targetState = page,
             transitionSpec = {
@@ -84,7 +86,7 @@ fun CustomizePanel(
             ) {
                 PanelTitle(shown.title)
                 when (shown) {
-                    Page.Main -> MainPage(wallpaper, sort, cameFrom) { page = it }
+                    Page.Main -> MainPage(wallpaper, sort, cameFrom, panel) { page = it }
                     Page.Wallpaper -> Options(WallpaperSource.entries, wallpaper, { it.title }, onWallpaper)
                     Page.Weather -> Options(listOf<Condition?>(null) + Condition.entries, WeatherPreview.condition, { it?.label ?: "Live" }) {
                         WeatherPreview.condition = it
@@ -98,7 +100,8 @@ fun CustomizePanel(
 }
 
 @Composable
-private fun MainPage(wallpaper: WallpaperSource, sort: SortMode, focusOn: Page, open: (Page) -> Unit) {
+private fun MainPage(wallpaper: WallpaperSource, sort: SortMode, focusOn: Page, panel: PanelState, open: (Page) -> Unit) {
+    val context = LocalContext.current
     val requesters = remember { Page.entries.associateWith { FocusRequester() } }
     val weather = wallpaper == WallpaperSource.Weather
     LaunchedEffect(Unit) {
@@ -120,6 +123,17 @@ private fun MainPage(wallpaper: WallpaperSource, sort: SortMode, focusOn: Page, 
     }
     PanelGap()
     PanelItem("Sort Apps", { open(Page.Sort) }, Modifier.focusFor(Page.Sort), value = sort.title, opens = true)
+
+    // What the Home button opens. The TV's own home screen takes over at once, so the panel closes.
+    var toolkitHome by remember { mutableStateOf(HomeSwitcher.isToolkitHome(context)) }
+    PanelGap()
+    PanelLabel("Home Screen")
+    PanelItem("Toolkit", { if (HomeSwitcher.useToolkit(context)) toolkitHome = true }, selected = toolkitHome)
+    PanelItem(
+        HomeSwitcher.stockName(context),
+        { panel.close { HomeSwitcher.useStock(context) } },
+        selected = !toolkitHome,
+    )
 }
 
 /** A page of options, the [selected] one checked and focused on arrival. Picks apply immediately. */

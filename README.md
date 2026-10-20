@@ -20,12 +20,11 @@ A calm, minimal home screen (launcher) for Google TV and Android TV, built with 
 ## Getting started
 
 1. Build and install the app on your TV (see below).
-2. Try it from your apps list, or make it your home screen:
-   - Turn on **Toolkit** in **Settings › System › Accessibility**. Home then opens Toolkit, and Force stop works in one click.
-   - Or set it as the default home over adb:
-     ```bash
-     adb shell cmd package set-home-activity com.tk.toolkit.tv/.MainActivity
-     ```
+2. Try it from your apps list, or make it what the Home button opens. Once, from a computer:
+   ```bash
+   adb shell pm grant com.tk.toolkit.tv android.permission.WRITE_SECURE_SETTINGS
+   ```
+   Then **Customize › Home Screen** switches between Toolkit and the TV's own home (Google TV or Android TV) at any time. Toolkit takes Home over with its accessibility service (which also makes Force stop one click); choosing the TV's home turns that off and goes there. Without the grant, the switch opens Accessibility settings to turn **Toolkit** on or off by hand.
 
 ## Building
 

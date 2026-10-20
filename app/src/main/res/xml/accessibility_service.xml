@@ -8,4 +8,4 @@
     android:canRetrieveWindowContent="true"
     android:description="@string/accessibility_service_description"
     android:notificationTimeout="100"
-    android:packageNames="com.android.tv.settings,com.android.settings,com.google.android.apps.tv.launcherx" />
+    android:packageNames="com.android.tv.settings,com.android.settings,com.google.android.apps.tv.launcherx,com.google.android.tvlauncher,com.google.android.leanbacklauncher" />

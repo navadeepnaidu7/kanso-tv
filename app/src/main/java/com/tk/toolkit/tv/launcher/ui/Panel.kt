@@ -146,6 +146,17 @@ fun PanelTitle(title: String) {
     )
 }
 
+/** A small heading over a group of rows. */
+@Composable
+fun PanelLabel(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp, fontWeight = FontWeight.Medium, letterSpacing = 0.sp),
+        color = ToolkitColors.OnSurfaceMuted,
+        modifier = Modifier.padding(start = 20.dp, top = 6.dp, bottom = 6.dp),
+    )
+}
+
 /** Space between groups of rows. */
 @Composable
 fun PanelGap() = Spacer(Modifier.height(14.dp))

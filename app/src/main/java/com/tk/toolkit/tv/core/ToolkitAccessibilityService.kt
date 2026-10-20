@@ -13,8 +13,9 @@ import com.tk.toolkit.tv.launcher.data.AppActions
 
 /**
  * System-level helpers that need an accessibility service:
- * - Sends the Home button (and the stock Google TV home screen) to Toolkit, so it works as
- *   the launcher without disabling the stock one.
+ * - Sends the Home button (and the TV's own home screen) to Toolkit, so it works as the
+ *   launcher without disabling the stock one. Customize turns this service off to hand Home
+ *   back to the TV's home screen (see HomeSwitcher).
  * - Drives the system App info screen to press "Force stop" → "OK" after [forceStop].
  */
 class ToolkitAccessibilityService : AccessibilityService() {
@@ -60,8 +61,7 @@ class ToolkitAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
         // Catches the stock home showing up some other way (boot, an app exiting to home).
         if (event.eventType == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
-            event.packageName == STOCK_LAUNCHER &&
-            event.className?.toString() == STOCK_HOME_ACTIVITY
+            event.className?.toString() in STOCK_HOME_ACTIVITIES
         ) {
             openToolkit()
             return
@@ -126,8 +126,12 @@ class ToolkitAccessibilityService : AccessibilityService() {
 
         private const val TIMEOUT_MS = 6_000L
         private const val LONG_PRESS_MS = 600L
-        private const val STOCK_LAUNCHER = "com.google.android.apps.tv.launcherx"
-        private const val STOCK_HOME_ACTIVITY = "com.google.android.apps.tv.launcherx.home.HomeActivity"
+        /** The TV home screens' own home pages (Google TV, Android TV, older Android TV). */
+        private val STOCK_HOME_ACTIVITIES = setOf(
+            "com.google.android.apps.tv.launcherx.home.HomeActivity",
+            "com.google.android.tvlauncher.MainActivity",
+            "com.google.android.leanbacklauncher.MainActivity",
+        )
         private val FORCE_STOP_LABELS = listOf("Force stop")
         private val CONFIRM_LABELS = listOf("OK")
     }

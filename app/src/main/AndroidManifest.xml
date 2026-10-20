@@ -12,6 +12,10 @@
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
     <!-- Downloads the curated wallpapers. -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Lets Customize switch the Home button between Toolkit and the TV's home screen. Granted over adb. -->
+    <uses-permission
+        android:name="android.permission.WRITE_SECURE_SETTINGS"
+        tools:ignore="ProtectedPermissions" />
     <!-- "My images" wallpapers: photos in Pictures/ and Download/. Asked for only when chosen. -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission
