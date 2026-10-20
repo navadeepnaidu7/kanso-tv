@@ -114,6 +114,8 @@ fun SidePanel(
                         .background(PanelColor)
                         .border(1.dp, Color.White.copy(alpha = 0.08f), PanelShape)
                         .ignoreHeldSelectKey()
+                        // Panels are their own window, so the activity never sees these keys.
+                        .recordKeysForSounds()
                         .padding(16.dp),
                 ) {
                     content(state)
@@ -171,8 +173,10 @@ fun PanelItem(
     val rest = if (danger) ToolkitColors.Danger else ToolkitColors.OnSurface
     val focused = if (danger) FocusedDanger else FocusedText
     Surface(
-        onClick = onClick,
-        modifier = modifier.fillMaxWidth(),
+        onClick = withClickSound(onClick),
+        modifier = modifier
+            .navigationSound()
+            .fillMaxWidth(),
         shape = ClickableSurfaceDefaults.shape(RowShape),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = Color.Transparent,

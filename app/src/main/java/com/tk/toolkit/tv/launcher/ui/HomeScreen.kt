@@ -265,6 +265,7 @@ fun HomeScreen(viewModel: LauncherViewModel = viewModel()) {
                                 .focusProperties {
                                     (lastDockKey ?: dockKeys.firstOrNull())?.let { down = requesterFor(it) }
                                 }
+                                .navigationSound()
                                 .focusable(),
                         )
                     }

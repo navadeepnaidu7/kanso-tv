@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -71,6 +72,7 @@ internal fun FocusTile(
     val press = animateFloatAsState(if (pressed && focused) 1f else 0f, Motion.press, label = "press")
     val dim = animateFloatAsState(if (dimmed) 0.3f else 1f, Motion.fade, label = "dim")
     val targetScale = if (isMoving) Motion.MovingScale else Motion.FocusScale
+    val view = LocalView.current
     // Read only in layer blocks, so it isn't state.
     val tileHeight = remember { FloatArray(1) }
 
@@ -79,8 +81,16 @@ internal fun FocusTile(
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Card(
-            onClick = onClick,
-            onLongClick = onLongClick,
+            onClick = {
+                UiSounds.click(view)
+                onClick()
+            },
+            onLongClick = onLongClick?.let { longClick ->
+                {
+                    UiSounds.click(view)
+                    longClick()
+                }
+            },
             interactionSource = interaction,
             modifier = tileModifier
                 .fillMaxWidth()
@@ -97,7 +107,10 @@ internal fun FocusTile(
                 .focusRequester(focusRequester)
                 .onFocusChanged {
                     focused = it.isFocused
-                    if (it.isFocused) onFocused()
+                    if (it.isFocused) {
+                        UiSounds.focusMoved(view)
+                        onFocused()
+                    }
                 },
             shape = CardDefaults.shape(TileShape),
             // Scale is ours (spring-driven, above), so the card's own tween is off.

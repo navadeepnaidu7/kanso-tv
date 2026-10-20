@@ -26,6 +26,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Icon
 import com.tk.toolkit.tv.launcher.data.LauncherApp
@@ -50,6 +51,7 @@ fun AppTile(
     upTarget: FocusRequester? = null,
 ) {
     val bringIntoView = remember { BringIntoViewRequester() }
+    val view = LocalView.current
 
     // Keep the tile being moved focused and on screen as it changes position.
     LaunchedEffect(isMoving, index) {
@@ -67,7 +69,18 @@ fun AppTile(
         onLongClick = onLongClick,
         isMoving = isMoving,
         dimmed = dimmed,
-        modifier = modifier.moveKeys(isMoving, onMoveBy, onDrop, columns),
+        modifier = modifier.moveKeys(
+            isMoving,
+            onMoveBy = { delta ->
+                UiSounds.moved(view, delta, columns)
+                onMoveBy(delta)
+            },
+            onDrop = {
+                UiSounds.click(view)
+                onDrop()
+            },
+            columns = columns,
+        ),
         tileModifier = Modifier
             .bringIntoViewRequester(bringIntoView)
             .focusProperties { upTarget?.let { up = it } },

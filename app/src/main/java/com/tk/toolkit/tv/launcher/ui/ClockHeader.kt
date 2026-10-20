@@ -103,8 +103,10 @@ fun ClockHeader(
 @Composable
 private fun HeaderButton(icon: ImageVector, description: String, onClick: () -> Unit) {
     IconButton(
-        onClick = onClick,
-        modifier = Modifier.size(44.dp),
+        onClick = withClickSound(onClick),
+        modifier = Modifier
+            .navigationSound()
+            .size(44.dp),
         colors = IconButtonDefaults.colors(
             containerColor = Color.Black.copy(alpha = 0.18f),
             contentColor = ToolkitColors.OnSurface.copy(alpha = 0.8f),

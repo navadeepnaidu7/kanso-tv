@@ -5,12 +5,14 @@ import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.os.Bundle
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.core.content.ContextCompat
 import com.tk.toolkit.tv.core.ToolkitApp
 import com.tk.toolkit.tv.launcher.LauncherViewModel
+import com.tk.toolkit.tv.launcher.ui.UiSounds
 
 class MainActivity : ComponentActivity() {
 
@@ -37,6 +39,12 @@ class MainActivity : ComponentActivity() {
         setContent { ToolkitApp() }
         // The backdrop covers the whole window; drawing the window background under it is wasted GPU time.
         window.setBackgroundDrawable(null)
+    }
+
+    // Remembered so focus changes can play the matching navigation tick (see UiSounds).
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        UiSounds.onKey(event)
+        return super.dispatchKeyEvent(event)
     }
 
     override fun onResume() {
