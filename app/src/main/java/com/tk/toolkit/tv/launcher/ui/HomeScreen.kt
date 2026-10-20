@@ -109,6 +109,7 @@ fun HomeScreen(viewModel: LauncherViewModel = viewModel()) {
     var menuFromGrid by remember { mutableStateOf(false) }
     var showHidden by remember { mutableStateOf(false) }
     var showCustomize by remember { mutableStateOf(false) }
+    var showWeatherPreview by remember { mutableStateOf(false) }
     var wallpaperCaption by remember { mutableStateOf<String?>(null) }
     val wallpaperOpaque = remember { mutableStateOf(false) }
     // "My images" needs photo access; ask when it's picked, and switch once it's granted.
@@ -382,8 +383,11 @@ fun HomeScreen(viewModel: LauncherViewModel = viewModel()) {
                 if (needsPermission) askForPhotos.launch(photoPermission) else viewModel.setWallpaperSource(source)
             },
             onSort = viewModel::setSortMode,
+            onPreviewWeather = { showWeatherPreview = true },
         )
     }
+
+    if (showWeatherPreview) WeatherPreviewPanel(onDismiss = { showWeatherPreview = false })
 
     if (showHidden && state.hiddenApps.isNotEmpty()) {
         HiddenAppsPanel(

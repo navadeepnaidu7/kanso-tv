@@ -10,6 +10,7 @@ import androidx.compose.material.icons.outlined.DragIndicator
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.PhotoLibrary
+import androidx.compose.material.icons.outlined.Preview
 import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material.icons.outlined.Shuffle
 import androidx.compose.material.icons.outlined.WbCloudy
@@ -31,11 +32,12 @@ fun CustomizePanel(
     onDismiss: () -> Unit,
     onWallpaper: (WallpaperSource) -> Unit,
     onSort: (SortMode) -> Unit,
+    onPreviewWeather: () -> Unit,
 ) {
     val first = remember { FocusRequester() }
     LaunchedEffect(Unit) { first.requestFocusWhenReady() }
 
-    SidePanel(onDismiss = onDismiss) {
+    SidePanel(onDismiss = onDismiss) { panel ->
         Column(Modifier.verticalScroll(rememberScrollState())) {
             PanelTitle("Customize")
             PanelSection("Wallpaper")
@@ -48,6 +50,14 @@ fun CustomizePanel(
                     icon = source.icon(),
                     subtitle = source.description,
                     selected = isCurrent,
+                )
+            }
+            if (wallpaper == WallpaperSource.Weather) {
+                PanelItem(
+                    "Preview weather",
+                    { panel.close(onPreviewWeather) },
+                    icon = Icons.Outlined.Preview,
+                    subtitle = "See it in any weather, at any time of day",
                 )
             }
             PanelSection("Sort All Apps")

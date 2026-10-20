@@ -91,42 +91,45 @@ class WeatherRepository(context: Context) {
         }.onFailure { Log.w(TAG, "Couldn't get the weather", it) }.getOrNull()
     }
 
-    private class Place(val latitude: Double, val longitude: Double, val name: String?)
+    private class Place(val latitude: Double, val longitude: Double, val name: String?, val country: String?)
 
     private fun place(): Place? {
         val now = System.currentTimeMillis()
-        if (now - prefs.getLong(KEY_PLACE_TIME, 0) < PLACE_FOR && prefs.contains(KEY_LAT)) {
-            return Place(
-                prefs.getString(KEY_LAT, null)!!.toDouble(),
-                prefs.getString(KEY_LON, null)!!.toDouble(),
-                prefs.getString(KEY_PLACE, null),
-            )
+        if (now - prefs.getLong(KEY_PLACE_TIME, 0) < PLACE_FOR && prefs.contains(KEY_COUNTRY)) {
+            return saved()
         }
         val found = runCatching {
             val o = JSONObject(get("https://ipwho.is/"))
             check(o.optBoolean("success", false))
-            Place(o.getDouble("latitude"), o.getDouble("longitude"), o.optString("city").ifEmpty { null })
+            Place(o.getDouble("latitude"), o.getDouble("longitude"), o.optString("city").ifEmpty { null }, o.optString("country_code").ifEmpty { null })
         }.recoverCatching {
             val o = JSONObject(get("https://ipapi.co/json/"))
-            Place(o.getDouble("latitude"), o.getDouble("longitude"), o.optString("city").ifEmpty { null })
+            Place(o.getDouble("latitude"), o.getDouble("longitude"), o.optString("city").ifEmpty { null }, o.optString("country_code").ifEmpty { null })
         }.onFailure { Log.w(TAG, "Couldn't find where the TV is", it) }.getOrNull()
         if (found != null) {
             prefs.edit()
                 .putString(KEY_LAT, found.latitude.toString())
                 .putString(KEY_LON, found.longitude.toString())
                 .putString(KEY_PLACE, found.name)
+                .putString(KEY_COUNTRY, found.country)
                 .putLong(KEY_PLACE_TIME, now)
                 .apply()
             return found
         }
         // Somewhere we found before is better than nowhere.
-        return prefs.getString(KEY_LAT, null)?.let {
-            Place(it.toDouble(), prefs.getString(KEY_LON, null)!!.toDouble(), prefs.getString(KEY_PLACE, null))
-        }
+        return if (prefs.contains(KEY_LAT)) saved() else null
     }
 
+    private fun saved() = Place(
+        prefs.getString(KEY_LAT, null)!!.toDouble(),
+        prefs.getString(KEY_LON, null)!!.toDouble(),
+        prefs.getString(KEY_PLACE, null),
+        prefs.getString(KEY_COUNTRY, null),
+    )
+
     private fun fetch(place: Place): WeatherReport {
-        val fahrenheit = Locale.getDefault().country in setOf("US", "LR", "MM")
+        // The country the TV is in, not the one its settings say (TVs are often set to the US).
+        val fahrenheit = (place.country ?: Locale.getDefault().country) in setOf("US", "LR", "MM", "BS", "BZ", "KY", "PW")
         val url = "https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}" +
             "&current=temperature_2m,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m,precipitation" +
             "&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset" +
@@ -171,6 +174,7 @@ class WeatherRepository(context: Context) {
         const val KEY_LAT = "lat"
         const val KEY_LON = "lon"
         const val KEY_PLACE = "place"
+        const val KEY_COUNTRY = "country"
         const val KEY_PLACE_TIME = "placeTime"
         const val PLACE_FOR = 12 * 60 * 60 * 1000L
         const val STALE_AFTER = 3 * 60 * 60 * 1000L

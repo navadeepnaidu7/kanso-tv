@@ -81,6 +81,8 @@ class PanelState internal constructor() {
 fun SidePanel(
     onDismiss: () -> Unit,
     width: Dp = 440.dp,
+    /** How much the screen behind darkens; low when the point is to see what's behind. */
+    dim: Float = 0.45f,
     content: @Composable ColumnScope.(PanelState) -> Unit,
 ) {
     val state = remember { PanelState() }
@@ -97,7 +99,7 @@ fun SidePanel(
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
         val window = (LocalView.current.parent as? DialogWindowProvider)?.window
-        SideEffect { window?.setDimAmount(0.45f) }
+        SideEffect { window?.setDimAmount(dim) }
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterEnd) {
             AnimatedVisibility(
                 visibleState = visibility,

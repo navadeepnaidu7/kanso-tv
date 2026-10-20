@@ -4,6 +4,7 @@ import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.floor
+import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
@@ -267,16 +268,25 @@ fun renderSky(s: Scene, w: Int, h: Int, seed: Int = 7): IntArray {
     val discR = if (sunVisible) 0.022f * h else 0.026f * h
     val moonOrSun = clearness > 0.6f
 
+    // The control point that makes the curve pass through the middle stop.
+    val ctrl = Rgb(
+        2f * stops.mid.r - (stops.top.r + stops.horizon.r) / 2f,
+        2f * stops.mid.g - (stops.top.g + stops.horizon.g) / 2f,
+        2f * stops.mid.b - (stops.top.b + stops.horizon.b) / 2f,
+    )
     for (y in 0 until h) {
         val v = y / (h - 1f)
-        // Smooth easing between the three stops; the middle sits a bit below halfway.
-        val base = if (v < 0.55f) {
-            val t = smooth(v / 0.55f)
-            stops.top.mix(stops.mid, t)
-        } else {
-            val t = smooth((v - 0.55f) / 0.45f)
-            stops.mid.mix(stops.horizon, t)
-        }
+        // One smooth curve through the three stops (the middle a bit below halfway). Easing into and
+        // out of the middle stop separately would flatten there and show as a line across the sky.
+        val t = v.toDouble().pow(MidCurve).toFloat()
+        val a = (1f - t) * (1f - t)
+        val b = 2f * (1f - t) * t
+        val c = t * t
+        val base = Rgb(
+            stops.top.r * a + ctrl.r * b + stops.horizon.r * c,
+            stops.top.g * a + ctrl.g * b + stops.horizon.g * c,
+            stops.top.b * a + ctrl.b * b + stops.horizon.b * c,
+        )
         for (x in 0 until w) {
             var r = base.r
             var g = base.g
@@ -297,8 +307,15 @@ fun renderSky(s: Scene, w: Int, h: Int, seed: Int = 7): IntArray {
                 if (d < discR + 1.5f) {
                     // A soft-edged disc; the moon is a cool white, the sun nearly pure light.
                     val edge = ((discR + 1.5f - d) / 3f).coerceIn(0f, 1f)
-                    val disc = if (sunVisible) Rgb(0xFFFDF4) else Rgb(0xE9EEF7)
-                    val a = edge * (if (sunVisible) 0.95f else 0.92f) * clearness
+                    // The moon is a touch darker toward its rim, with a few faint grey seas.
+                    val disc = if (sunVisible) {
+                        Rgb(0xFFFDF4)
+                    } else {
+                        val rim = (d / discR).coerceIn(0f, 1f)
+                        val sea = moonSeas(dx / discR, dy / 1.15f / discR)
+                        Rgb(0xF6F8FC).mix(Rgb(0xB9C0CC), 0.25f * rim * rim + 0.3f * sea)
+                    }
+                    val a = edge * clearness
                     r += (disc.r - r) * a
                     g += (disc.g - g) * a
                     b += (disc.b - b) * a
@@ -310,6 +327,15 @@ fun renderSky(s: Scene, w: Int, h: Int, seed: Int = 7): IntArray {
         }
     }
     return px
+}
+
+/** Puts the curve's halfway point (the middle stop) at 55% of the way down. */
+private val MidCurve = kotlin.math.ln(0.5) / kotlin.math.ln(0.55)
+
+/** Faint darker patches across the moon's face, in -1..1 coordinates on its disc. */
+private fun moonSeas(x: Float, y: Float): Float {
+    fun blob(cx: Float, cy: Float, r: Float) = exp(-((x - cx) * (x - cx) + (y - cy) * (y - cy)) / (r * r))
+    return (blob(-0.3f, -0.25f, 0.32f) + blob(0.15f, -0.1f, 0.25f) + 0.8f * blob(-0.1f, 0.35f, 0.22f) + 0.6f * blob(0.4f, 0.3f, 0.2f)).coerceAtMost(1f)
 }
 
 private fun smooth(t: Float): Float {

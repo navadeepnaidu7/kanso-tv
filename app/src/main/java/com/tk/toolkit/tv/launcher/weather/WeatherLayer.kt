@@ -99,10 +99,14 @@ fun WeatherLayer(
             now = System.currentTimeMillis()
         }
     }
-    LaunchedEffect(report, now / (5 * 60_000L)) { reportCaption(report?.caption(now)) }
-
     // Rounded, so the sky is only re-rendered when it would look different.
-    val scene = (report?.sceneAt(now) ?: fallbackScene(now)).settled()
+    val scene = sceneFor(report, now).settled()
+    val caption = if (WeatherPreview.active) {
+        "Preview  \u00b7  ${scene.condition.label}  \u00b7  ${WeatherPreview.time.label}"
+    } else {
+        report?.caption(now)
+    }
+    LaunchedEffect(caption) { reportCaption(caption) }
 
     LaunchedEffect(scene, size) {
         if (size.width <= 0 || size.height <= 0) return@LaunchedEffect
@@ -150,10 +154,19 @@ fun WeatherLayer(
     }
 
     val starPaint = remember { Paint(Paint.ANTI_ALIAS_FLAG).apply { strokeCap = Paint.Cap.ROUND; color = android.graphics.Color.WHITE } }
-    val dropPaint = remember { Paint(Paint.ANTI_ALIAS_FLAG).apply { strokeCap = Paint.Cap.ROUND } }
+    val dropPaint = remember { Paint() }
     val starGroups = remember(size) { starGroups(size) }
-    val legibility = remember {
-        Brush.verticalGradient(0f to Color.Black.copy(alpha = 0.32f), 1f to Color.Transparent)
+    // A soft shade behind the clock, eased to nothing over the top 55% of the screen. Its end has to
+    // be set to that height: by default a gradient spans the whole screen and would be cut off midway.
+    val legibility = remember(size) {
+        Brush.verticalGradient(
+            0f to Color.Black.copy(alpha = 0.32f),
+            0.35f to Color.Black.copy(alpha = 0.2f),
+            0.7f to Color.Black.copy(alpha = 0.06f),
+            1f to Color.Transparent,
+            startY = 0f,
+            endY = size.height * ShadeHeight,
+        )
     }
 
     Box(
@@ -166,11 +179,13 @@ fun WeatherLayer(
                 val f = crossfade.value
                 previous?.let { draw(it, t, 1f, starGroups, starPaint, dropPaint) }
                 art?.let { draw(it, t, if (previous == null) 1f else f, starGroups, starPaint, dropPaint) }
-                // A soft shade behind the clock, so it reads over bright skies.
-                drawRect(legibility, size = Size(this.size.width, this.size.height * 0.4f))
+                drawRect(legibility, size = Size(this.size.width, this.size.height * ShadeHeight))
             },
     )
 }
+
+/** How far down the shade behind the clock reaches. */
+private const val ShadeHeight = 0.55f
 
 /** What's been rendered for one scene. */
 private class SceneArt(val scene: Scene, val sky: ImageBitmap) {
@@ -229,8 +244,13 @@ private fun DrawScope.draw(
 
     art.precipitation?.let { fall ->
         drawIntoCanvas { canvas ->
-            for (d in fall.depths) {
+            fall.depths.forEachIndexed { index, d ->
                 dropPaint.color = if (fall.snow) android.graphics.Color.WHITE else android.graphics.Color.rgb(210, 225, 242)
+                // Smoothing hundreds of moving streaks costs the TV more than the whole sky, and at this
+                // size and speed it doesn't show; only bigger, nearer snowflakes are drawn smooth and round.
+                val smooth = fall.snow && index > 0
+                dropPaint.isAntiAlias = smooth
+                dropPaint.strokeCap = if (fall.snow) Paint.Cap.ROUND else Paint.Cap.BUTT
                 dropPaint.alpha = (255 * d.alpha * alpha).roundToInt().coerceIn(0, 255)
                 dropPaint.strokeWidth = d.strokeWidth * scale
                 if (fall.snow) canvas.nativeCanvas.drawPoints(d.out, 0, d.used, dropPaint)
@@ -276,15 +296,35 @@ private fun Scene.settled() = copy(
     intensity = (intensity * 10).roundToInt() / 10f,
 )
 
-/** Until the first report arrives: a fair sky with the sun up from 6 to 6. */
-private fun fallbackScene(now: Long): Scene {
-    val day = Calendar.getInstance().apply {
-        timeInMillis = now
-        set(Calendar.HOUR_OF_DAY, 0)
-        set(Calendar.MINUTE, 0)
-        set(Calendar.SECOND, 0)
-        set(Calendar.MILLISECOND, 0)
-    }.timeInMillis
+/**
+ * The scene to show at [now]: the real weather, or what [WeatherPreview] asks for. Without a
+ * report yet, a fair sky with the sun up from 6 to 6.
+ */
+private fun sceneFor(report: WeatherReport?, now: Long): Scene {
     val hour = 60 * 60 * 1000L
-    return Scene.of(2, 35, now, day + 6 * hour, day + 18 * hour, 8f, 270f, 0f)
+    val (sunrise, sunset) = if (report != null) {
+        val day = 24 * hour
+        val shift = Math.round((now - (report.sunrise + report.sunset) / 2).toDouble() / day) * day
+        report.sunrise + shift to report.sunset + shift
+    } else {
+        val midnight = Calendar.getInstance().apply {
+            timeInMillis = now
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+        midnight + 6 * hour to midnight + 18 * hour
+    }
+    val at = WeatherPreview.time.at(now, sunrise, sunset)
+    val previewed = WeatherPreview.condition
+    return when {
+        previewed != null -> {
+            val (code, cover) = previewed.sample()
+            val wet = previewed.isWet || previewed == Condition.Snow
+            Scene.of(code, cover, at, sunrise, sunset, report?.windKmh ?: 14f, report?.windFromDegrees ?: 270f, if (wet) 2f else 0f)
+        }
+        report != null -> report.sceneAt(at)
+        else -> Scene.of(2, 35, at, sunrise, sunset, 8f, 270f, 0f)
+    }
 }

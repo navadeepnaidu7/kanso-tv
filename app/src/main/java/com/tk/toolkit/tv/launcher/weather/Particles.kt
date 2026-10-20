@@ -48,7 +48,7 @@ class Precipitation(scene: Scene, seed: Int = 5) {
                 Depth((n * 0.18f).toInt(), 96f, 6.5f, 6.5f, 0.9f, 24f),
             )
         } else if (amount > 0f) {
-            val n = (80 + 440 * amount).toInt()
+            val n = (80 + 320 * amount).toInt()
             val len = if (drizzle) 0.5f else 1f
             val fast = if (drizzle) 0.65f else 1f
             listOf(
