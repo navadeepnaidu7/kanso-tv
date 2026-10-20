@@ -1,11 +1,14 @@
 package com.tk.toolkit.tv.launcher.data
 
+import android.app.ActivityOptions
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.os.Bundle
 import android.provider.Settings
 import android.widget.Toast
 import androidx.core.net.toUri
+import com.tk.toolkit.tv.R
 import com.tk.toolkit.tv.core.ToolkitAccessibilityService
 
 /** System-level actions the launcher can perform on an app. */
@@ -60,13 +63,22 @@ object AppActions {
         }
     }
 
-    fun Context.safeStart(intent: Intent) {
+    /** Starts [intent], or says why it couldn't. Returns whether it started. */
+    fun Context.safeStart(intent: Intent, options: Bundle? = null): Boolean {
         try {
-            startActivity(intent)
+            startActivity(intent, options)
+            return true
         } catch (_: ActivityNotFoundException) {
             Toast.makeText(this, "Couldn't open that", Toast.LENGTH_SHORT).show()
         } catch (_: SecurityException) {
             Toast.makeText(this, "Not allowed", Toast.LENGTH_SHORT).show()
         }
+        return false
     }
+
+    /** Opens an app with the launcher's own transition: it fades in over the opening animation. */
+    fun Context.startApp(intent: Intent): Boolean = safeStart(
+        intent,
+        ActivityOptions.makeCustomAnimation(this, R.anim.app_open_enter, R.anim.app_open_exit).toBundle(),
+    )
 }

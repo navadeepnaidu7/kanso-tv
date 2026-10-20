@@ -44,6 +44,21 @@ object Motion {
     /** Fades: labels, titles, dimming. */
     val fade: AnimationSpec<Float> = spring(dampingRatio = 1f, stiffness = 500f)
 
+    /** An app's tile gliding to the middle and its colors flooding the screen. A whisper of overshoot. */
+    val launchGrow: AnimationSpec<Float> = spring(dampingRatio = 0.86f, stiffness = 240f)
+
+    /** Coming back from an app: the tile settling into its place, no bounce. */
+    val launchReturn: AnimationSpec<Float> = spring(dampingRatio = 1f, stiffness = 300f)
+
+    /** How far into the opening the app is started, so its start-up hides behind the motion. */
+    const val LaunchHandoffMillis = 200L
+
+    /** How long to wait for an app to cover the screen before giving up and coming back. */
+    const val LaunchGiveUpMillis = 1_500L
+
+    /** How wide the tile grows to while opening, as a share of the screen width. */
+    const val LaunchTileWidth = 0.3f
+
     /** How long the background takes to crossfade to the focused app's artwork. */
     const val BackdropMillis = 550
 

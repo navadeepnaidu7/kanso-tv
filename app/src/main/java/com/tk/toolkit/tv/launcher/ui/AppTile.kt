@@ -25,11 +25,16 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.Icon
 import com.tk.toolkit.tv.launcher.data.LauncherApp
+import com.tk.toolkit.tv.ui.theme.Motion
 import com.tk.toolkit.tv.ui.theme.ToolkitColors
 
 @Composable
@@ -40,7 +45,8 @@ fun AppTile(
     dimmed: Boolean,
     focusRequester: FocusRequester,
     onFocused: () -> Unit,
-    onClick: () -> Unit,
+    /** Gets where the tile is on screen (as focused, in root pixels), for the opening animation. */
+    onClick: (from: Rect?) -> Unit,
     onLongClick: () -> Unit,
     onMoveBy: (Int) -> Unit,
     onDrop: () -> Unit,
@@ -52,6 +58,8 @@ fun AppTile(
 ) {
     val bringIntoView = remember { BringIntoViewRequester() }
     val view = LocalView.current
+    // Read only on click, so it isn't state.
+    val coordinates = remember { arrayOfNulls<LayoutCoordinates>(1) }
 
     // Keep the tile being moved focused and on screen as it changes position.
     LaunchedEffect(isMoving, index) {
@@ -65,7 +73,7 @@ fun AppTile(
         label = app.label,
         focusRequester = focusRequester,
         onFocused = onFocused,
-        onClick = onClick,
+        onClick = { onClick(coordinates[0]?.takeIf { it.isAttached }?.boundsInRoot()?.lifted()) },
         onLongClick = onLongClick,
         isMoving = isMoving,
         dimmed = dimmed,
@@ -82,20 +90,33 @@ fun AppTile(
             columns = columns,
         ),
         tileModifier = Modifier
+            .onGloballyPositioned { coordinates[0] = it }
             .bringIntoViewRequester(bringIntoView)
             .focusProperties { upTarget?.let { up = it } },
     ) {
-        if (app.banner != null) {
-            Image(
-                app.banner,
-                contentDescription = app.label,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-            )
-        } else {
-            IconTileContent(app)
-        }
+        AppArt(app)
         if (isMoving) MoveOverlay()
+    }
+}
+
+/** The tile's rectangle grown by the focus scale, as it looks while focused. */
+private fun Rect.lifted(): Rect {
+    val grow = (Motion.FocusScale - 1f) / 2f
+    return Rect(left - width * grow, top - height * grow, right + width * grow, bottom + height * grow)
+}
+
+/** An app's tile artwork: its TV banner, or its icon on its color. */
+@Composable
+internal fun AppArt(app: LauncherApp) {
+    if (app.banner != null) {
+        Image(
+            app.banner,
+            contentDescription = app.label,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize(),
+        )
+    } else {
+        IconTileContent(app)
     }
 }
 

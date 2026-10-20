@@ -111,7 +111,7 @@ private const val ART_W = 160
 private const val ART_H = 90
 
 /** The app's banner (or icon on its color), shrunk, toned down and box-blurred into a soft wash. */
-private fun blurredArt(app: LauncherApp): ImageBitmap {
+internal fun blurredArt(app: LauncherApp): ImageBitmap {
     val bitmap = Bitmap.createBitmap(ART_W, ART_H, Bitmap.Config.ARGB_8888)
     val canvas = android.graphics.Canvas(bitmap)
     // Richer color, less light: artwork becomes a backdrop, not a billboard.

@@ -57,6 +57,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -71,7 +73,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.tk.toolkit.tv.launcher.LauncherViewModel
 import com.tk.toolkit.tv.launcher.data.AppActions
-import com.tk.toolkit.tv.launcher.data.AppActions.safeStart
+import com.tk.toolkit.tv.launcher.data.AppActions.startApp
 import com.tk.toolkit.tv.launcher.data.LauncherApp
 import com.tk.toolkit.tv.ui.theme.Dimens
 import com.tk.toolkit.tv.ui.theme.Motion
@@ -129,6 +131,10 @@ fun HomeScreen(viewModel: LauncherViewModel = viewModel()) {
     // In the home view the dock settles into the space All Apps peeks into.
     val dockDrop = animateFloatAsState(if (homeView) 1f else 0f, Motion.dockSlide, label = "dockDrop")
     val homeAnchor = remember { FocusRequester() }
+    val opening = rememberLaunchTransition()
+    fun openApp(app: LauncherApp, from: Rect?) {
+        if (state.movingKey == null) opening.open(app, from) { context.startApp(viewModel.launchIntent(app)) }
+    }
     // The favorite to return to from the home view.
     var lastDockKey by remember { mutableStateOf<String?>(null) }
 
@@ -216,7 +222,7 @@ fun HomeScreen(viewModel: LauncherViewModel = viewModel()) {
         if (app != null) backdropApp.value = app
     }
 
-    Box(Modifier.fillMaxSize()) {
+    Box(Modifier.fillMaxSize().onPreviewKeyEvent { opening.blocksInput }) {
         Backdrop(backdropApp, inGrid, covered = { wallpaperOpaque.value })
         WallpaperLayer(
             source = state.wallpaperSource,
@@ -232,7 +238,14 @@ fun HomeScreen(viewModel: LauncherViewModel = viewModel()) {
                 contentPadding = PaddingValues(start = Dimens.EdgePadding, end = Dimens.EdgePadding, bottom = 48.dp),
                 horizontalArrangement = Arrangement.spacedBy(Dimens.TileGap),
                 verticalArrangement = Arrangement.spacedBy(Dimens.RowGap),
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier
+                    .fillMaxSize()
+                    // The home screen sinks back a little as an app opens.
+                    .graphicsLayer {
+                        val s = 1f - 0.04f * opening.amount
+                        scaleX = s
+                        scaleY = s
+                    },
             ) {
                 item(key = HERO_KEY, span = { GridItemSpan(maxLineSpan) }) {
                     Box(
@@ -280,7 +293,7 @@ fun HomeScreen(viewModel: LauncherViewModel = viewModel()) {
                             upTarget = homeAnchor,
                             requesterFor = ::requesterFor,
                             onTileFocused = { index, app -> onTileFocused(DOCK + app.packageName, index, app) },
-                            onLaunch = { app -> if (state.movingKey == null) context.safeStart(viewModel.launchIntent(app)) },
+                            onLaunch = ::openApp,
                             onMenu = { app ->
                                 if (state.movingKey == null) {
                                     menuApp = app
@@ -315,7 +328,7 @@ fun HomeScreen(viewModel: LauncherViewModel = viewModel()) {
                         dimmed = state.movingKey != null && !isMoving,
                         focusRequester = requesterFor(key),
                         onFocused = { onTileFocused(key, index, app) },
-                        onClick = { if (state.movingKey == null) context.safeStart(viewModel.launchIntent(app)) },
+                        onClick = { from -> openApp(app, from) },
                         onLongClick = {
                             if (state.movingKey == null) {
                                 menuApp = app
@@ -356,6 +369,8 @@ fun HomeScreen(viewModel: LauncherViewModel = viewModel()) {
         ) {
             MoveHint(grid = state.movingInGrid)
         }
+
+        LaunchOverlay(opening)
     }
 
     if (showCustomize) {
@@ -376,7 +391,7 @@ fun HomeScreen(viewModel: LauncherViewModel = viewModel()) {
         HiddenAppsPanel(
             apps = state.hiddenApps,
             onDismiss = { showHidden = false },
-            onLaunch = { app -> context.safeStart(viewModel.launchIntent(app)) },
+            onLaunch = { app -> openApp(app, null) },
             onLongPress = { menuApp = it },
         )
     }
@@ -415,7 +430,7 @@ private fun Dock(
     upTarget: FocusRequester,
     requesterFor: (String) -> FocusRequester,
     onTileFocused: (index: Int, app: LauncherApp) -> Unit,
-    onLaunch: (LauncherApp) -> Unit,
+    onLaunch: (LauncherApp, from: Rect?) -> Unit,
     onMenu: (LauncherApp) -> Unit,
     onMoveBy: (Int) -> Unit,
     onDrop: () -> Unit,
@@ -447,7 +462,7 @@ private fun Dock(
                     dimmed = movingKey != null && !isMoving,
                     focusRequester = requesterFor(DOCK + app.packageName),
                     onFocused = { onTileFocused(index, app) },
-                    onClick = { onLaunch(app) },
+                    onClick = { from -> onLaunch(app, from) },
                     onLongClick = { onMenu(app) },
                     onMoveBy = onMoveBy,
                     onDrop = onDrop,
