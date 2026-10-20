@@ -13,10 +13,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
@@ -44,6 +47,9 @@ import androidx.tv.material3.Text
 import com.tk.toolkit.tv.ui.theme.Dimens
 import com.tk.toolkit.tv.ui.theme.Motion
 import com.tk.toolkit.tv.ui.theme.ToolkitColors
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlinx.coroutines.delay
 
 internal val TileShape = RoundedCornerShape(Dimens.TileCorner)
 
@@ -69,6 +75,23 @@ internal fun FocusTile(
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val lift = animateFloatAsState(if (focused) 1f else 0f, Motion.focus, label = "lift")
+    // The outline breathes, slowly, once focus has settled on the tile. Updated every other frame:
+    // something this slow doesn't need more, and it keeps the redraws it causes light.
+    val breath = remember { mutableFloatStateOf(1f) }
+    LaunchedEffect(focused && !isMoving) {
+        breath.floatValue = 1f
+        if (!focused || isMoving) return@LaunchedEffect
+        delay(Motion.BreathDelayMillis)
+        val start = withFrameNanos { it }
+        while (true) {
+            withFrameNanos { }
+            withFrameNanos { now ->
+                val t = (now - start) / 1e9f
+                // Starts at full brightness, so it eases in without a jump.
+                breath.floatValue = 1f - Motion.BreathDepth * (1f - cos(2f * PI.toFloat() * t / Motion.BreathSeconds)) / 2f
+            }
+        }
+    }
     val press = animateFloatAsState(if (pressed && focused) 1f else 0f, Motion.press, label = "press")
     val dim = animateFloatAsState(if (dimmed) 0.3f else 1f, Motion.fade, label = "dim")
     val targetScale = if (isMoving) Motion.MovingScale else Motion.FocusScale
@@ -105,7 +128,7 @@ internal fun FocusTile(
                     shadowElevation = Dimens.FocusElevation.toPx() * l.coerceIn(0f, 1f)
                 }
                 // Outside the card's own clip, so the edge line isn't cut in half by it.
-                .focusEdge(alpha = { lift.value.coerceIn(0f, 1f) }, moving = isMoving)
+                .focusEdge(alpha = { lift.value.coerceIn(0f, 1f) * breath.floatValue }, moving = isMoving)
                 .focusRequester(focusRequester)
                 .onFocusChanged {
                     focused = it.isFocused

@@ -65,6 +65,15 @@ object Motion {
     /** How long rain falls on the weather wallpaper before it eases off. */
     const val ShowerSeconds = 8f
 
+    /** One breath of the focused tile's outline, in and out. */
+    const val BreathSeconds = 2.6f
+
+    /** How far the outline fades at the bottom of a breath (0.35 = down to 65% brightness). */
+    const val BreathDepth = 0.35f
+
+    /** How long focus rests on a tile before its outline starts breathing. */
+    const val BreathDelayMillis = 450L
+
     /** How long the background takes to crossfade to the focused app's artwork. */
     const val BackdropMillis = 550
 
