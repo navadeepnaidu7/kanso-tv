@@ -18,11 +18,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -33,7 +35,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -52,14 +53,15 @@ import androidx.tv.material3.Text
 import com.tk.toolkit.tv.ui.theme.ToolkitColors
 
 /*
- * The launcher's panel language: a glassy sheet that slides in from the right edge over the
- * dimmed home screen, with rows that turn into white pills on focus (like the header buttons
- * and focused tiles: light means "here").
+ * The launcher's panel language, kept quiet: a dark sheet on the right edge, a title, and plain
+ * rows of text. A row turns into a white pill when focused (light means "here", as on the tiles);
+ * a row that opens a page shows its current value and a small arrow, an option shows a check
+ * when it's the chosen one. No icons, no descriptions.
  */
 
-private val PanelShape = RoundedCornerShape(28.dp)
-private val RowShape = RoundedCornerShape(16.dp)
-private val PanelColor = Color(0xF2121520)
+private val PanelShape = RoundedCornerShape(24.dp)
+private val RowShape = RoundedCornerShape(14.dp)
+private val PanelColor = Color(0xFF0E1118)
 private val FocusedText = Color(0xFF0B0C10)
 private val FocusedDanger = Color(0xFFC62828)
 
@@ -76,13 +78,17 @@ class PanelState internal constructor() {
     }
 }
 
-/** A sheet on the right edge. [onDismiss] runs once it has slid out, by Back or [PanelState.close]. */
+/**
+ * A sheet on the right edge. [onDismiss] runs once it has slid out, by Back or [PanelState.close].
+ * [onBack] gets Back first (to step back out of a page); returning true keeps the panel open.
+ */
 @Composable
 fun SidePanel(
     onDismiss: () -> Unit,
-    width: Dp = 440.dp,
+    width: Dp = 400.dp,
     /** How much the screen behind darkens; low when the point is to see what's behind. */
     dim: Float = 0.45f,
+    onBack: () -> Boolean = { false },
     content: @Composable ColumnScope.(PanelState) -> Unit,
 ) {
     val state = remember { PanelState() }
@@ -95,7 +101,7 @@ fun SidePanel(
     }
 
     Dialog(
-        onDismissRequest = { state.close() },
+        onDismissRequest = { if (!onBack()) state.close() },
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
     ) {
         val window = (LocalView.current.parent as? DialogWindowProvider)?.window
@@ -114,11 +120,11 @@ fun SidePanel(
                         .fillMaxHeight()
                         .clip(PanelShape)
                         .background(PanelColor)
-                        .border(1.dp, Color.White.copy(alpha = 0.08f), PanelShape)
+                        .border(1.dp, Color.White.copy(alpha = 0.06f), PanelShape)
                         .ignoreHeldSelectKey()
                         // Panels are their own window, so the activity never sees these keys.
                         .recordKeysForSounds()
-                        .padding(16.dp),
+                        .padding(horizontal = 12.dp, vertical = 16.dp),
                 ) {
                     content(state)
                 }
@@ -127,48 +133,34 @@ fun SidePanel(
     }
 }
 
-/** A panel's title, with an optional line under it. */
+/** A panel's (or a page's) title. */
 @Composable
-fun PanelTitle(title: String, subtitle: String? = null) {
-    Column(Modifier.padding(start = 18.dp, end = 18.dp, top = 12.dp, bottom = 8.dp)) {
-        Text(
-            title,
-            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold, fontSize = 24.sp),
-            color = ToolkitColors.OnSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        subtitle?.let {
-            Text(
-                it,
-                style = MaterialTheme.typography.bodyMedium,
-                color = ToolkitColors.OnSurfaceMuted,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
-}
-
-/** A small label above a group of rows. */
-@Composable
-fun PanelSection(label: String) {
+fun PanelTitle(title: String) {
     Text(
-        label.uppercase(),
-        style = MaterialTheme.typography.labelMedium,
-        color = ToolkitColors.OnSurfaceMuted,
-        modifier = Modifier.padding(start = 18.dp, top = 18.dp, bottom = 6.dp),
+        title,
+        style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold, fontSize = 22.sp),
+        color = ToolkitColors.OnSurface,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 16.dp),
     )
 }
 
-/** A row: icon, title and optional subtitle; a white pill when focused, a check when [selected]. */
+/** Space between groups of rows. */
+@Composable
+fun PanelGap() = Spacer(Modifier.height(14.dp))
+
+/**
+ * A row. [value] shows the current choice on the right, [opens] adds an arrow for rows that open a
+ * page, [selected] a check for the chosen option.
+ */
 @Composable
 fun PanelItem(
     title: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    icon: ImageVector? = null,
-    subtitle: String? = null,
+    value: String? = null,
+    opens: Boolean = false,
     selected: Boolean = false,
     danger: Boolean = false,
 ) {
@@ -178,7 +170,8 @@ fun PanelItem(
         onClick = withClickSound(onClick),
         modifier = modifier
             .navigationSound()
-            .fillMaxWidth(),
+            .fillMaxWidth()
+            .height(52.dp),
         shape = ClickableSurfaceDefaults.shape(RowShape),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = Color.Transparent,
@@ -192,33 +185,49 @@ fun PanelItem(
     ) {
         val color = LocalContentColor.current
         Row(
-            Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
+            Modifier
+                .fillMaxSize()
+                .padding(horizontal = 20.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            icon?.let {
-                Icon(it, contentDescription = null, tint = color.copy(alpha = 0.85f), modifier = Modifier.size(22.dp))
-                Spacer(Modifier.width(16.dp))
+            Text(
+                title,
+                style = MaterialTheme.typography.titleMedium.copy(fontSize = 17.sp, fontWeight = FontWeight.Normal),
+                color = color,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            value?.let {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp, fontWeight = FontWeight.Normal),
+                    color = color.copy(alpha = 0.55f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(start = 16.dp),
+                )
             }
-            Column(Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.titleMedium.copy(fontSize = 17.sp), color = color)
-                subtitle?.let {
-                    Text(
-                        it,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = color.copy(alpha = 0.62f),
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+            if (opens) {
+                Icon(
+                    Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = color.copy(alpha = 0.45f),
+                    modifier = Modifier
+                        .padding(start = 4.dp)
+                        .size(20.dp),
+                )
             }
             if (selected) {
-                Spacer(Modifier.width(12.dp))
-                Icon(Icons.Rounded.Check, contentDescription = "Selected", tint = color, modifier = Modifier.size(20.dp))
+                Icon(
+                    Icons.Rounded.Check,
+                    contentDescription = "Selected",
+                    tint = color.copy(alpha = 0.85f),
+                    modifier = Modifier
+                        .padding(start = 12.dp)
+                        .size(18.dp),
+                )
             }
         }
     }
 }
-
-/** Fills the panel's remaining height, pushing what follows to the bottom. */
-@Composable
-fun ColumnScope.PanelSpacer() = Spacer(Modifier.weight(1f).fillMaxWidth())

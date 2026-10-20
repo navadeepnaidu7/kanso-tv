@@ -44,7 +44,7 @@ fun HiddenAppsPanel(
     }
 
     SidePanel(onDismiss = onDismiss, width = 560.dp) { panel ->
-        PanelTitle("Hidden apps", "Not on your home screen. Hold OK on one to unhide it.")
+        PanelTitle("Hidden Apps")
         CompositionLocalProvider(LocalBringIntoViewSpec provides scrollSpec) {
             LazyVerticalGrid(
                 columns = GridCells.Fixed(HIDDEN_COLUMNS),
