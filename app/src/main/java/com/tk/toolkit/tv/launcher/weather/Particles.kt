@@ -6,7 +6,8 @@ import kotlin.random.Random
 
 /**
  * Rain or snow, in three depths: far drops are small, faint and slow, near ones big and fast,
- * which gives the fall its depth. Positions are kept as fractions of the screen; [step] moves
+ * which gives the fall its depth. Rain comes in short showers: [stop] lets the drops already
+ * falling finish and starts no new ones, and [start] brings it back. Positions are kept as fractions of the screen; [step] moves
  * them and writes each depth's drawing coordinates (in pixels) into [Depth.out]: line segments
  * (x0, y0, x1, y1) for rain, points (x, y) for snow.
  */
@@ -48,28 +49,46 @@ class Precipitation(scene: Scene, seed: Int = 5) {
                 Depth((n * 0.18f).toInt(), 96f, 6.5f, 6.5f, 0.9f, 24f),
             )
         } else if (amount > 0f) {
-            val n = (80 + 320 * amount).toInt()
+            val n = (60 + 200 * amount).toInt()
             val len = if (drizzle) 0.5f else 1f
             val fast = if (drizzle) 0.65f else 1f
             listOf(
-                Depth((n * 0.5f).toInt(), 1300f * fast, 18f * len, 1.1f, 0.2f, 0f),
-                Depth((n * 0.32f).toInt(), 1850f * fast, 30f * len, 1.4f, 0.3f, 0f),
-                Depth((n * 0.18f).toInt(), 2500f * fast, 46f * len, 2f, 0.4f, 0f),
+                Depth((n * 0.5f).toInt(), 1300f * fast, 18f * len, 1.1f, 0.16f, 0f),
+                Depth((n * 0.32f).toInt(), 1850f * fast, 30f * len, 1.4f, 0.24f, 0f),
+                Depth((n * 0.18f).toInt(), 2500f * fast, 46f * len, 2f, 0.32f, 0f),
             )
         } else {
             emptyList()
         }
     }
 
+    /** Whether new drops keep starting at the top. */
+    private var falling = true
+
     init {
         for (d in depths) {
             for (i in 0 until d.count) {
-                d.x[i] = random.nextFloat()
-                d.y[i] = random.nextFloat()
                 d.phase[i] = random.nextFloat() * 6.28f
                 d.jitter[i] = 0.8f + random.nextFloat() * 0.4f
             }
         }
+        start()
+    }
+
+    /** Starts falling, already spread down the screen as if it had been for a while. */
+    fun start() {
+        falling = true
+        for (d in depths) {
+            for (i in 0 until d.count) {
+                d.x[i] = random.nextFloat()
+                d.y[i] = random.nextFloat()
+            }
+        }
+    }
+
+    /** Lets what's falling reach the ground, then nothing more falls. */
+    fun stop() {
+        falling = false
     }
 
     /** Moves everything on by [dt] seconds and fills each depth's [Depth.out] for a [w]×[h] screen. */
@@ -81,10 +100,15 @@ class Precipitation(scene: Scene, seed: Int = 5) {
             val fall = d.speed * scale / h
             var o = 0
             for (i in 0 until d.count) {
+                if (d.y[i] >= Landed) continue
                 val v = fall * d.jitter[i]
                 d.y[i] += v * dt
                 d.x[i] += v * slant * (h / w) * dt
                 if (d.y[i] > 1.05f) {
+                    if (!falling) {
+                        d.y[i] = Landed
+                        continue
+                    }
                     d.y[i] -= 1.1f
                     d.x[i] = random.nextFloat()
                 }
@@ -107,7 +131,10 @@ class Precipitation(scene: Scene, seed: Int = 5) {
     }
 }
 
-/** Thunderstorm lightning: a bright double flicker every few seconds, as a 0–1 brightness. */
+/** Where a drop waits once it has landed and the shower is over. */
+private const val Landed = 10f
+
+/** Thunderstorm lightning: a bright double flicker now and then, as a 0–1 brightness. */
 class Lightning(seed: Int = 9) {
     private val random = Random(seed)
     private var strike = 2.5f
@@ -115,7 +142,7 @@ class Lightning(seed: Int = 9) {
 
     fun brightness(time: Float): Float {
         if (time > strike + 1.5f) {
-            strike = time + 4f + random.nextFloat() * 9f
+            strike = time + 7f + random.nextFloat() * 14f
             strength = 0.55f + random.nextFloat() * 0.45f
         }
         val d = time - strike

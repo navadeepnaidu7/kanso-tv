@@ -62,6 +62,9 @@ object Motion {
     /** How wide the tile grows to while opening, as a share of the screen width. */
     const val LaunchTileWidth = 0.3f
 
+    /** How long rain falls on the weather wallpaper before it eases off. */
+    const val ShowerSeconds = 8f
+
     /** How long the background takes to crossfade to the focused app's artwork. */
     const val BackdropMillis = 550
 

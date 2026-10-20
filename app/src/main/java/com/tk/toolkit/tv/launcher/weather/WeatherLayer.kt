@@ -1,6 +1,9 @@
 package com.tk.toolkit.tv.launcher.weather
 
 import android.graphics.Bitmap
+import android.graphics.BitmapShader
+import android.graphics.Matrix
+import android.graphics.Shader
 import android.graphics.Paint
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearOutSlowInEasing
@@ -33,7 +36,6 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
-import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.layout.onSizeChanged
@@ -122,23 +124,36 @@ fun WeatherLayer(
         previous = null
         next.clouds = coroutineScope {
             cloudLayers(scene).map { spec ->
-                async(Dispatchers.Default) { CloudArt(spec, bitmapOf(renderClouds(spec, scene), spec.width, spec.height)) }
+                async(Dispatchers.Default) {
+                    CloudArt(spec, Bitmap.createBitmap(renderClouds(spec, scene), spec.width, spec.height, Bitmap.Config.ARGB_8888))
+                }
             }.awaitAll()
         }
         next.cloudFade.animateTo(1f, tween(Motion.WallpaperCrossfadeMillis, easing = LinearOutSlowInEasing))
     }
 
     // The clock for the drift and the falling drops: every other frame, only while on screen.
+    // Rain falls for a few seconds each time the home view opens (or the weather changes), then
+    // eases off and the sky stays calm. Snow is gentle enough to keep falling.
     LaunchedEffect(animating) {
         if (!animating) return@LaunchedEffect
         var last = -1L
+        var shower: Precipitation? = null
+        var showerEnds = 0f
         while (true) {
             withFrameNanos { }
             withFrameNanos { t ->
                 val dt = if (last < 0) 0f else ((t - last) / 1e9f).coerceAtMost(0.1f)
                 last = t
                 time += dt
-                art?.precipitation?.step(dt, time, size.width.toFloat(), size.height.toFloat())
+                val fall = art?.precipitation
+                if (fall != null && fall !== shower) {
+                    shower = fall
+                    fall.start()
+                    showerEnds = time + Motion.ShowerSeconds
+                }
+                if (fall != null && !fall.snow && time > showerEnds) fall.stop()
+                fall?.step(dt, time, size.width.toFloat(), size.height.toFloat())
             }
         }
     }
@@ -196,7 +211,22 @@ private class SceneArt(val scene: Scene, val sky: ImageBitmap) {
     val starAlpha = starVisibility(scene)
 }
 
-private class CloudArt(val spec: CloudLayerSpec, val image: ImageBitmap)
+/**
+ * A cloud layer, drawn as one image repeating across the screen (rather than copies side by side,
+ * whose edges would meet in a faint seam whenever they sit between pixels).
+ */
+private class CloudArt(val spec: CloudLayerSpec, bitmap: Bitmap) {
+    private val shader = BitmapShader(bitmap, Shader.TileMode.REPEAT, Shader.TileMode.CLAMP)
+    val paint = Paint(Paint.FILTER_BITMAP_FLAG).apply { shader = this@CloudArt.shader }
+    private val matrix = Matrix()
+
+    /** Positions the repeat so the image is [scale] times its size, shifted [x] along, its top at [top]. */
+    fun place(x: Float, top: Float, scale: Float) {
+        matrix.setScale(scale, scale)
+        matrix.postTranslate(x, top)
+        shader.setLocalMatrix(matrix)
+    }
+}
 
 private fun DrawScope.draw(
     art: SceneArt,
@@ -230,15 +260,11 @@ private fun DrawScope.draw(
             val spec = cloud.spec
             val top = spec.top * h
             val bandH = (spec.bottom - spec.top) * h
-            val scaledW = spec.width * bandH / spec.height
-            val dst = IntSize(scaledW.toInt() + 2, bandH.toInt())
-            var x = -(((drift(spec, art.scene) * time * scale) % scaledW) + scaledW) % scaledW
-            while (x < w) {
-                translate(x, top) {
-                    drawImage(cloud.image, dstSize = dst, alpha = cloudAlpha, filterQuality = FilterQuality.Low)
-                }
-                x += scaledW
-            }
+            val k = bandH / spec.height
+            val repeat = spec.width * k
+            cloud.place(-((drift(spec, art.scene) * time * scale) % repeat), top, k)
+            cloud.paint.alpha = (255 * cloudAlpha).roundToInt().coerceIn(0, 255)
+            drawIntoCanvas { it.nativeCanvas.drawRect(0f, top, w, top + bandH, cloud.paint) }
         }
     }
 
