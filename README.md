@@ -43,3 +43,7 @@ Release builds are signed with the local debug key (it's a personal sideloaded a
 - Woodblock prints: [The Metropolitan Museum of Art](https://www.metmuseum.org/about-the-met/policies-and-documents/open-access) Open Access collection (CC0).
 - Weather: [Open-Meteo](https://open-meteo.com/) (CC BY 4.0); location from [ipwho.is](https://ipwho.is/) and [ipapi.co](https://ipapi.co/).
 - Earth photography: [NASA Image and Video Library](https://images.nasa.gov/), courtesy of the International Space Station crews.
+
+## License
+
+[MIT](LICENSE).
