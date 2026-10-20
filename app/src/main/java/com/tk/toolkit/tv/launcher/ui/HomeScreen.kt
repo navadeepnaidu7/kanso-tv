@@ -58,7 +58,11 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -153,9 +157,6 @@ fun HomeScreen(viewModel: LauncherViewModel = viewModel()) {
     fun openApp(app: LauncherApp, from: Rect?) {
         if (state.movingKey == null) opening.open(app, from) { context.startApp(viewModel.launchIntent(app)) }
     }
-    // The favorite to return to from the home view.
-    var lastDockKey by remember { mutableStateOf<String?>(null) }
-
     val dockKeys = state.favorites.map { DOCK + it.packageName }
     val gridKeys = state.apps.map { ALL + it.packageName } +
         if (state.hiddenApps.isNotEmpty()) listOf(MORE_APPS_KEY) else emptyList()
@@ -199,6 +200,17 @@ fun HomeScreen(viewModel: LauncherViewModel = viewModel()) {
         requesterFor(key).requestFocusWhenReady()
     }
 
+    // Arriving at the favorites from above (the home view) or below (All Apps' first row) always
+    // lands on the first one, with the dock scrolled back to its start.
+    fun toFirstFavorite(): Boolean {
+        val first = dockKeys.firstOrNull() ?: return false
+        scope.launch { focusTile(first) }
+        return true
+    }
+    val upToFavorites = Modifier.onPreviewKeyEvent { event ->
+        event.type == KeyEventType.KeyDown && event.key == Key.DirectionUp && state.movingKey == null && toFirstFavorite()
+    }
+
     // This is the home screen: Back never leaves it. It cancels a move; from the dock it goes to the
     // home view; from anywhere else it returns to the dock.
     BackHandler {
@@ -236,7 +248,6 @@ fun HomeScreen(viewModel: LauncherViewModel = viewModel()) {
         focusedIndex = index
         inGrid.value = !key.startsWith(DOCK)
         homeView = false
-        if (key.startsWith(DOCK)) lastDockKey = key
         if (app != null) backdropApp.value = app
     }
 
@@ -283,15 +294,15 @@ fun HomeScreen(viewModel: LauncherViewModel = viewModel()) {
                             captionAlpha = { 1f - peekAlpha.value },
                         )
                         // The home view's invisible focus spot, between the dock and the header:
-                        // Up from the dock lands here, Down returns to the favorite you came from.
+                        // Up from the dock lands here, Down goes to the first favorite.
                         Box(
                             Modifier
                                 .align(Alignment.BottomCenter)
                                 .fillMaxWidth()
                                 .height(1.dp)
                                 .focusRequester(homeAnchor)
-                                .focusProperties {
-                                    (lastDockKey ?: dockKeys.firstOrNull())?.let { down = requesterFor(it) }
+                                .onPreviewKeyEvent { event ->
+                                    event.type == KeyEventType.KeyDown && event.key == Key.DirectionDown && toFirstFavorite()
                                 }
                                 .navigationSound()
                                 .focusable(),
@@ -355,6 +366,7 @@ fun HomeScreen(viewModel: LauncherViewModel = viewModel()) {
                         columns = Dimens.Columns,
                         // Tiles glide to their new places when the sort changes.
                         modifier = Modifier
+                            .then(if (index < Dimens.Columns) upToFavorites else Modifier)
                             .animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = if (gridGlides) Motion.reorder else null)
                             .graphicsLayer { alpha = peekAlpha.value },
                     )
