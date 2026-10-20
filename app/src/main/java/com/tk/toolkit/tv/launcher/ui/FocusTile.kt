@@ -75,8 +75,9 @@ internal fun FocusTile(
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val lift = animateFloatAsState(if (focused) 1f else 0f, Motion.focus, label = "lift")
-    // The outline breathes, slowly, once focus has settled on the tile. Updated every other frame:
-    // something this slow doesn't need more, and it keeps the redraws it causes light.
+    // The outline breathes, slowly, once focus has settled on the tile. Updated every fourth frame
+    // (about 12 times a second): plenty for something this slow, and every redraw is costly on a TV,
+    // whose compositor scales the whole screen up to the panel each time.
     val breath = remember { mutableFloatStateOf(1f) }
     LaunchedEffect(focused && !isMoving) {
         breath.floatValue = 1f
@@ -84,7 +85,7 @@ internal fun FocusTile(
         delay(Motion.BreathDelayMillis)
         val start = withFrameNanos { it }
         while (true) {
-            withFrameNanos { }
+            repeat(3) { withFrameNanos { } }
             withFrameNanos { now ->
                 val t = (now - start) / 1e9f
                 // Starts at full brightness, so it eases in without a jump.
