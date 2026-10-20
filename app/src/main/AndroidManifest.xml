@@ -12,7 +12,7 @@
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
     <!-- Downloads the curated wallpapers. -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Lets Customize switch the Home button between Toolkit and the TV's home screen. Granted over adb. -->
+    <!-- Lets Customize switch the Home button between Kanso and the TV's home screen. Granted over adb. -->
     <uses-permission
         android:name="android.permission.WRITE_SECURE_SETTINGS"
         tools:ignore="ProtectedPermissions" />
@@ -27,11 +27,11 @@
 
     <application
         android:allowBackup="true"
-        android:banner="@mipmap/ic_launcher"
+        android:banner="@drawable/banner"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Toolkit">
+        android:theme="@style/Theme.Kanso">
         <activity
             android:name=".MainActivity"
             android:clearTaskOnLaunch="true"
@@ -58,7 +58,7 @@
         </activity>
 
         <service
-            android:name=".core.ToolkitAccessibilityService"
+            android:name=".core.KansoAccessibilityService"
             android:exported="false"
             android:label="@string/app_name"
             android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">

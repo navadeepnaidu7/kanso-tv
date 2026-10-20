@@ -22,6 +22,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Toolkit"
+rootProject.name = "Kanso"
 include(":app")
  

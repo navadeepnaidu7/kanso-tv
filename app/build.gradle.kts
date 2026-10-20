@@ -4,13 +4,13 @@ plugins {
 }
 
 android {
-    namespace = "com.tk.toolkit.tv"
+    namespace = "com.navadeep.kanso.tv"
     compileSdk {
         version = release(37)
     }
 
     defaultConfig {
-        applicationId = "com.tk.toolkit.tv"
+        applicationId = "com.navadeep.kanso.tv"
         minSdk = 28
         targetSdk = 37
         versionCode = 1

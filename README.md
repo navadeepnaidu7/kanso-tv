@@ -1,4 +1,4 @@
-# Toolkit for Google TV
+# Kanso for Google TV
 
 A calm, minimal home screen (launcher) for Google TV and Android TV, built with Jetpack Compose for TV.
 
@@ -22,9 +22,9 @@ A calm, minimal home screen (launcher) for Google TV and Android TV, built with 
 1. Build and install the app on your TV (see below).
 2. Try it from your apps list, or make it what the Home button opens. Once, from a computer:
    ```bash
-   adb shell pm grant com.tk.toolkit.tv android.permission.WRITE_SECURE_SETTINGS
+   adb shell pm grant com.navadeep.kanso.tv android.permission.WRITE_SECURE_SETTINGS
    ```
-   Then **Customize › Home Screen** switches between Toolkit and the TV's own home (Google TV or Android TV) at any time. Toolkit takes Home over with its accessibility service (which also makes Force stop one click); choosing the TV's home turns that off and goes there. Without the grant, the switch opens Accessibility settings to turn **Toolkit** on or off by hand.
+   Then **Customize › Home Screen** switches between Kanso and the TV's own home (Google TV or Android TV) at any time. Kanso takes Home over with its accessibility service (which also makes Force stop one click); choosing the TV's home turns that off and goes there. Without the grant, the switch opens Accessibility settings to turn **Kanso** on or off by hand.
 
 ## Building
 
