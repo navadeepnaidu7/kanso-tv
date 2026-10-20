@@ -1,0 +1,43 @@
+# Toolkit for Google TV
+
+A calm, minimal home screen (launcher) for Google TV and Android TV, built with Jetpack Compose for TV.
+
+> **This fork was only possible because of [teja2495/my-toolkit-tv](https://github.com/teja2495/my-toolkit-tv)** by Teja Karlapudi.
+> The original launcher (app loading, the app menu, hidden apps, the Accessibility-based Home button takeover and one-click force stop) is their work; this fork redesigns the home screen on top of it. Thank you.
+
+## What this fork changes
+
+- **Home view.** Opens on a full-screen wallpaper with the clock, and your favorites resting along the bottom. Press Down to bring up the dock; press Up (or Back) to return to the clean view.
+- **Wallpapers.** Japanese woodblock prints by Hokusai and Hiroshige, photos of Earth from the International Space Station, both mixed, or your own photos (anything in Pictures or Downloads, e.g. sent with LocalSend). They crossfade every few minutes with a slow pan and zoom.
+- **Favorites dock and All Apps.** Favorites sit in a dock; Down glides into a full-screen All Apps grid that shares the dock's columns, so Down always lands on the tile below.
+- **Sorting.** Suggested (streaming and media first, then other apps, utilities and system), Name, Recently installed, or Custom: move any app anywhere from its menu.
+- **Backgrounds.** While browsing, the background is a soft blur of the focused app's artwork.
+- **Motion.** Spring-driven focus, scrolling and transitions, all tuned in one file (`ui/theme/Motion.kt`), and kept smooth on modest TV hardware: blurs and scrims are pre-rendered, so each frame is just a few image draws.
+- **Panels.** The app menu, Customize (wallpaper and sort) and Hidden apps slide in from the right.
+
+## Getting started
+
+1. Build and install the app on your TV (see below).
+2. Try it from your apps list, or make it your home screen:
+   - Turn on **Toolkit** in **Settings › System › Accessibility**. Home then opens Toolkit, and Force stop works in one click.
+   - Or set it as the default home over adb:
+     ```bash
+     adb shell cmd package set-home-activity com.tk.toolkit.tv/.MainActivity
+     ```
+
+## Building
+
+Open the project in Android Studio, or build from the command line:
+
+```bash
+./gradlew assembleRelease
+adb install -r app/build/outputs/apk/release/app-release.apk
+```
+
+Release builds are signed with the local debug key (it's a personal sideloaded app). Use the release build for daily use; Compose is noticeably slower in debug builds. The project targets Android 9 (API 28) and later.
+
+## Credits
+
+- Original launcher: [teja2495/my-toolkit-tv](https://github.com/teja2495/my-toolkit-tv) by Teja Karlapudi.
+- Woodblock prints: [The Metropolitan Museum of Art](https://www.metmuseum.org/about-the-met/policies-and-documents/open-access) Open Access collection (CC0).
+- Earth photography: [NASA Image and Video Library](https://images.nasa.gov/), courtesy of the International Space Station crews.

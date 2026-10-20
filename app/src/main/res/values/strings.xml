@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Toolkit</string>
+    <string name="accessibility_service_description">Makes the Home button open Toolkit, and lets Toolkit press the system \"Force stop\" button when you choose Force stop from an app\'s menu. It only reacts to the Home button, the stock home screen and the Settings app.</string>
+</resources>

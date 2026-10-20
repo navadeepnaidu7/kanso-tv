@@ -1,0 +1,47 @@
+# Built application files
+*.apk
+*.ap_
+*.aab
+*.dex
+*.class
+
+# Gradle and Kotlin
+.gradle/
+.gradle-codex/
+.kotlin/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Local configuration (SDK path, machine-specific)
+local.properties
+
+# Android Studio / IntelliJ
+*.iml
+.idea/
+captures/
+.navigation/
+.externalNativeBuild
+.cxx/
+
+# Signing keys and service credentials
+*.jks
+*.keystore
+google-services.json
+
+# Logs and profiling
+*.log
+*.hprof
+
+# Agent and editor local state
+.claude/settings.local.json
+
+# OS-specific files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+
+# Backup files
+*~
+*.swp
+*.bak
