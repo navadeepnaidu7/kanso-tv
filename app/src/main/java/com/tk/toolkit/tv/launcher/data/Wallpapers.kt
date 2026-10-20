@@ -22,6 +22,7 @@ import kotlin.math.max
 
 /** Where the home view's wallpaper comes from. */
 enum class WallpaperSource(val title: String, val description: String) {
+    Weather("Weather", "The sky outside right now, with live clouds, rain and snow"),
     Art("Japanese art", "Hokusai and Hiroshige woodblock prints"),
     Earth("Earth", "Photos of Earth from the International Space Station"),
     Mixed("Art and Earth", "Both, shuffled together"),
@@ -121,7 +122,7 @@ class WallpaperRepository(private val context: Context) {
         WallpaperSource.Earth -> WallpaperCatalog.Earth.shuffled()
         WallpaperSource.Mixed -> (WallpaperCatalog.Art + WallpaperCatalog.Earth).shuffled()
         WallpaperSource.Mine -> myImages().shuffled()
-        WallpaperSource.Off -> emptyList()
+        WallpaperSource.Weather, WallpaperSource.Off -> emptyList()
     }
 
     /** Images in Pictures/ and Download/ (where LocalSend saves), newest first. */

@@ -75,6 +75,7 @@ import com.tk.toolkit.tv.launcher.LauncherViewModel
 import com.tk.toolkit.tv.launcher.data.AppActions
 import com.tk.toolkit.tv.launcher.data.AppActions.startApp
 import com.tk.toolkit.tv.launcher.data.LauncherApp
+import com.tk.toolkit.tv.launcher.weather.WeatherLayer
 import com.tk.toolkit.tv.ui.theme.Dimens
 import com.tk.toolkit.tv.ui.theme.Motion
 import com.tk.toolkit.tv.ui.theme.ToolkitColors
@@ -224,12 +225,16 @@ fun HomeScreen(viewModel: LauncherViewModel = viewModel()) {
 
     Box(Modifier.fillMaxSize().onPreviewKeyEvent { opening.blocksInput }) {
         Backdrop(backdropApp, inGrid, covered = { wallpaperOpaque.value })
-        WallpaperLayer(
-            source = state.wallpaperSource,
-            visible = homeView,
-            onShowing = { wallpaperCaption = it?.let { w -> "${w.title}  \u00b7  ${w.credit}" } },
-            opaque = wallpaperOpaque,
-        )
+        if (state.wallpaperSource == WallpaperSource.Weather) {
+            WeatherLayer(visible = homeView, onCaption = { wallpaperCaption = it }, opaque = wallpaperOpaque)
+        } else {
+            WallpaperLayer(
+                source = state.wallpaperSource,
+                visible = homeView,
+                onShowing = { wallpaperCaption = it?.let { w -> "${w.title}  \u00b7  ${w.credit}" } },
+                opaque = wallpaperOpaque,
+            )
+        }
 
         CompositionLocalProvider(LocalBringIntoViewSpec provides pageSpec) {
             LazyVerticalGrid(

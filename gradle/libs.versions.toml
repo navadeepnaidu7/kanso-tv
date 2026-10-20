@@ -8,8 +8,10 @@ materialIcons = "1.7.8"
 lifecycle = "2.9.4"
 activityCompose = "1.13.0"
 profileinstaller = "1.4.1"
+junit = "4.13.2"
 
 [libraries]
+junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "composeBom" }
 androidx-compose-ui = { group = "androidx.compose.ui", name = "ui" }

@@ -12,6 +12,7 @@ import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.PhotoLibrary
 import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material.icons.outlined.Shuffle
+import androidx.compose.material.icons.outlined.WbCloudy
 import androidx.compose.material.icons.outlined.SortByAlpha
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -64,6 +65,7 @@ fun CustomizePanel(
 }
 
 private fun WallpaperSource.icon() = when (this) {
+    WallpaperSource.Weather -> Icons.Outlined.WbCloudy
     WallpaperSource.Art -> Icons.Outlined.Palette
     WallpaperSource.Earth -> Icons.Outlined.Public
     WallpaperSource.Mixed -> Icons.Outlined.Shuffle
