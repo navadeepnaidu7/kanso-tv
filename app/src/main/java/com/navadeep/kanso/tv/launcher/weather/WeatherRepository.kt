@@ -2,6 +2,7 @@ package com.navadeep.kanso.tv.launcher.weather
 
 import android.content.Context
 import android.util.Log
+import com.navadeep.kanso.tv.BuildConfig
 import java.net.HttpURLConnection
 import java.net.URL
 import java.util.Locale
@@ -76,10 +77,13 @@ data class WeatherReport(
  */
 class WeatherRepository(context: Context) {
     private val prefs = context.getSharedPreferences("weather", Context.MODE_PRIVATE)
+    private val fixedLocation = BuildConfig.WEATHER_LATITUDE.isFinite() && BuildConfig.WEATHER_LONGITUDE.isFinite()
+    private val reportKey = if (fixedLocation)
+        "report_override_${BuildConfig.WEATHER_LATITUDE}_${BuildConfig.WEATHER_LONGITUDE}" else KEY_REPORT
 
     /** The last report, if it's recent enough to still describe the sky. */
     fun cached(): WeatherReport? = runCatching {
-        prefs.getString(KEY_REPORT, null)?.let { WeatherReport.fromJson(JSONObject(it)) }
+        prefs.getString(reportKey, null)?.let { WeatherReport.fromJson(JSONObject(it)) }
             ?.takeIf { System.currentTimeMillis() - it.fetchedAt < STALE_AFTER }
     }.getOrNull()
 
@@ -87,13 +91,15 @@ class WeatherRepository(context: Context) {
     suspend fun refresh(): WeatherReport? = withContext(Dispatchers.IO) {
         runCatching {
             val place = place() ?: return@runCatching null
-            fetch(place).also { prefs.edit().putString(KEY_REPORT, it.toJson().toString()).apply() }
+            fetch(place).also { prefs.edit().putString(reportKey, it.toJson().toString()).apply() }
         }.onFailure { Log.w(TAG, "Couldn't get the weather", it) }.getOrNull()
     }
 
     private class Place(val latitude: Double, val longitude: Double, val name: String?, val country: String?)
 
     private fun place(): Place? {
+        if (fixedLocation) return Place(BuildConfig.WEATHER_LATITUDE, BuildConfig.WEATHER_LONGITUDE,
+            BuildConfig.WEATHER_NAME.ifBlank { null }, BuildConfig.WEATHER_COUNTRY.ifBlank { null })
         val now = System.currentTimeMillis()
         if (now - prefs.getLong(KEY_PLACE_TIME, 0) < PLACE_FOR && prefs.contains(KEY_COUNTRY)) {
             return saved()
@@ -133,7 +139,7 @@ class WeatherRepository(context: Context) {
         val url = "https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}" +
             "&current=temperature_2m,weather_code,cloud_cover,wind_speed_10m,wind_direction_10m,precipitation" +
             "&daily=temperature_2m_max,temperature_2m_min,sunrise,sunset" +
-            "&timezone=auto&timeformat=unixtime&forecast_days=1" +
+            "&timezone=${java.net.URLEncoder.encode(if (fixedLocation) BuildConfig.WEATHER_TIMEZONE else "auto", "UTF-8")}&timeformat=unixtime&forecast_days=1" +
             (if (fahrenheit) "&temperature_unit=fahrenheit" else "")
         val o = JSONObject(get(url))
         val current = o.getJSONObject("current")

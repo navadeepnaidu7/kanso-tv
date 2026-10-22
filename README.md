@@ -44,6 +44,8 @@ Release builds are signed with the local debug key (it's a personal sideloaded a
 - Weather: [Open-Meteo](https://open-meteo.com/) (CC BY 4.0); location from [ipwho.is](https://ipwho.is/) and [ipapi.co](https://ipapi.co/).
 - Earth photography: [NASA Image and Video Library](https://images.nasa.gov/), courtesy of the International Space Station crews.
 
+Weather follows the TV's local area by default. Personal sideload builds can optionally set `weather.latitude`, `weather.longitude`, `weather.name`, `weather.country`, and `weather.timezone` in the ignored `local.properties` file. Omit these settings for automatic location. Personal coordinates and place names should stay in that local file.
+
 ## License
 
 [MIT](LICENSE).

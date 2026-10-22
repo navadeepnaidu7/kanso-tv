@@ -26,13 +26,21 @@ class KansoAccessibilityService : AccessibilityService() {
     private var target: String? = null
     private var step = Step.PressForceStop
     private val timeout = Runnable { finish(null) }
+    private val checkInitialHome = Runnable {
+        // The stock Home window may have appeared before accessibility finished binding
+        // during boot. No new window event is guaranteed once the service connects.
+        if (instance === this && HomeSwitcher.isStock(rootInActiveWindow?.packageName)) openKanso()
+    }
 
     override fun onServiceConnected() {
         instance = this
+        handler.post(checkInitialHome)
+        handler.postDelayed(checkInitialHome, 1_000)
     }
 
     override fun onDestroy() {
         if (instance === this) instance = null
+        handler.removeCallbacksAndMessages(null)
         super.onDestroy()
     }
 

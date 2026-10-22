@@ -1,6 +1,21 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+}
+
+val localWeather = Properties().apply {
+    rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+fun weatherString(key: String, fallback: String = ""): String =
+    "\"" + localWeather.getProperty(key, fallback).replace("\\", "\\\\").replace("\"", "\\\"")
+        .replace("\n", "\\n").replace("\r", "\\r") + "\""
+val weatherLatitude = localWeather.getProperty("weather.latitude")?.toDoubleOrNull()
+val weatherLongitude = localWeather.getProperty("weather.longitude")?.toDoubleOrNull()
+require((weatherLatitude == null && weatherLongitude == null) ||
+    (weatherLatitude != null && weatherLongitude != null && weatherLatitude in -90.0..90.0 && weatherLongitude in -180.0..180.0)) {
+    "Set both weather.latitude and weather.longitude to valid coordinates, or omit both for automatic local weather."
 }
 
 android {
@@ -15,6 +30,11 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "1.0"
+        buildConfigField("double", "WEATHER_LATITUDE", weatherLatitude?.toString() ?: "Double.NaN")
+        buildConfigField("double", "WEATHER_LONGITUDE", weatherLongitude?.toString() ?: "Double.NaN")
+        buildConfigField("String", "WEATHER_NAME", weatherString("weather.name"))
+        buildConfigField("String", "WEATHER_COUNTRY", weatherString("weather.country"))
+        buildConfigField("String", "WEATHER_TIMEZONE", weatherString("weather.timezone", "auto"))
 
     }
 
@@ -33,6 +53,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
